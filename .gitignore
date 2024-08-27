@@ -1,0 +1,4 @@
+/WSSS/sess/*
+/WSSS/result
+/WSSS/VOCdevkit
+*.log
