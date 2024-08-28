@@ -7,6 +7,7 @@ import numpy as np
 import importlib
 import os
 import imageio
+import matplotlib.pyplot as plt
 
 import voc12.dataloader
 from misc import torchutils, indexing, imutils
@@ -19,6 +20,9 @@ def _work(process_id, model, dataset, args):
     databin = dataset[process_id]
     data_loader = DataLoader(databin,
                              shuffle=False, num_workers=args.num_workers // n_gpus, pin_memory=False)
+    colormap = plt.get_cmap('tab20')
+    colors = np.zeros((21, 3), dtype=np.uint8)
+    colors[1:] = (colormap(np.arange(20))[:, :3] * 255).astype(np.uint8)
 
     with torch.no_grad(), cuda.device(process_id):
 
@@ -40,17 +44,18 @@ def _work(process_id, model, dataset, args):
 
             rw = indexing.propagate_to_edge(cam_downsized_values, edge, beta=args.beta, exp_times=args.exp_times, radius=5)
 
-            rw_up = F.interpolate(rw, scale_factor=4, mode='bilinear', align_corners=False)[..., 0, :orig_img_size[0], :orig_img_size[1]]
+            rw_up = F.interpolate(rw, scale_factor=4, mode='bilinear', align_corners=False)[..., 0, :orig_img_size[0].item(), :orig_img_size[1].item()]
 
             rw_up = rw_up / torch.max(rw_up)
 
             rw_up_bg = F.pad(rw_up, (0, 0, 0, 0, 1, 0), value=args.sem_seg_bg_thres)
             rw_pred = torch.argmax(rw_up_bg, dim=0).cpu().numpy()
             
-
             rw_pred = keys[rw_pred]
+            color_img = colors[rw_pred]
 
             imageio.imsave(os.path.join(args.sem_seg_out_dir, img_name + '.png'), rw_pred.astype(np.uint8)) 
+            imageio.imsave(os.path.join(args.sem_seg_out_dir, img_name + '_color.png'), color_img)
 
             if process_id == n_gpus - 1 and iter % (len(databin) // 20) == 0:
                 print("%d " % ((5*iter+1)//(len(databin) // 20)), end='')

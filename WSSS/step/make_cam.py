@@ -13,7 +13,7 @@ from misc import torchutils, imutils
 
 cudnn.enabled = True
 
-def _work(process_id, model,model_ori, dataset, args):
+def _work(process_id, model, model_ori, dataset, args):
 
     databin = dataset[process_id]
     n_gpus = torch.cuda.device_count()
