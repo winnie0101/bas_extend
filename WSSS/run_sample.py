@@ -4,12 +4,12 @@ import numpy as np
 from misc import pyutils
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
     parser = argparse.ArgumentParser()
 
     # Environment
     parser.add_argument("--num_workers", default=os.cpu_count()//2, type=int)
-    parser.add_argument("--voc12_root", default='VOCdevkit/VOC2012', type=str,
+    parser.add_argument("--voc12_root", default='voc/VOC2012', type=str,
                         help="Path to VOC 2012 Devkit, must contain ./JPEGImages as subdirectory.")
 
     # Dataset
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # Class Activation Map
     parser.add_argument("--cam_network", default="net.resnet50_bas", type=str)
     parser.add_argument("--cam_crop_size", default=512, type=int)
-    parser.add_argument("--cam_batch_size", default=1, type=int) #16
+    parser.add_argument("--cam_batch_size", default=16, type=int) #16
     parser.add_argument("--cam_num_epoches", default=5, type=int)
     parser.add_argument("--cam_learning_rate", default=0.1, type=float)
     parser.add_argument("--cam_weight_decay", default=1e-4, type=float)
@@ -59,12 +59,12 @@ if __name__ == '__main__':
     parser.add_argument("--sem_seg_out_dir", default="result/sem_seg", type=str)
 
     # Step
-    parser.add_argument("--make_cam_pass", default=False)
-    parser.add_argument("--eval_cam_pass", default=False)
+    parser.add_argument("--make_cam_pass", default=False) #True
+    parser.add_argument("--eval_cam_pass", default=False) #True
     parser.add_argument("--cam_to_ir_label_pass", default=False)
     parser.add_argument("--train_irn_pass", default=False)
     parser.add_argument("--make_sem_seg_pass", default=True)
-    parser.add_argument("--eval_sem_seg_pass", default=False)
+    parser.add_argument("--eval_sem_seg_pass", default=True)
 
     args = parser.parse_args()
 
@@ -77,6 +77,7 @@ if __name__ == '__main__':
     
     print(vars(args))    
 
+    # 生成CAM
     if args.make_cam_pass is True:
         print("make_cam_pass")
         import step.make_cam
@@ -84,6 +85,7 @@ if __name__ == '__main__':
         timer = pyutils.Timer('step.make_cam:')
         step.make_cam.run(args)
 
+    # 評估CAM
     if args.eval_cam_pass is True:
         print("eval_cam_pass")
         import step.eval_cam
@@ -98,6 +100,7 @@ if __name__ == '__main__':
         print(final_miou)
         print(np.max(np.array(final_miou)))
 
+    # CAM轉IR label
     if args.cam_to_ir_label_pass is True:
         print("cam_to_ir_label_pass")
         import step.cam_to_ir_label
@@ -105,6 +108,7 @@ if __name__ == '__main__':
         timer = pyutils.Timer('step.cam_to_ir_label:')
         step.cam_to_ir_label.run(args)
 
+    # 訓練IRNet
     if args.train_irn_pass is True:
         print("train_irn_pass")
         import step.train_irn
@@ -112,6 +116,7 @@ if __name__ == '__main__':
         timer = pyutils.Timer('step.train_irn:')
         step.train_irn.run(args)
 
+    # 生成語意分割label
     if args.make_sem_seg_pass is True:
         print("make_sem_seg_pass")
         import step.make_sem_seg_labels
@@ -119,6 +124,7 @@ if __name__ == '__main__':
         timer = pyutils.Timer('step.make_sem_seg_labels:')
         step.make_sem_seg_labels.run(args)
 
+    # 評估語意分割結果
     if args.eval_sem_seg_pass is True:
         print("eval_sem_seg_pass")
         import step.eval_sem_seg
